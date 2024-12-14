@@ -7,17 +7,11 @@ using System.Reflection.Emit;
 
 namespace HideRaidStrategy
 {
-    [HarmonyPatch]
-    public static class IncidentWorker_Generic_Patch
+    [HarmonyPatch(typeof(IncidentWorker_RaidEnemy))]
+    public static class IncidentWorker_RaidEnemy_Patch
     {
-        [HarmonyTargetMethods]
-        public static IEnumerable<MethodBase> TargetMethods()
-        {
-            yield return AccessTools.Method(typeof(IncidentWorker_RaidEnemy), "GetLetterText");
-            yield return AccessTools.Method(typeof(IncidentWorker_ShamblerAssault), "GetLetterText");
-        }
-
         [HarmonyTranspiler]
+        [HarmonyPatch(nameof(GetLetterText))]
         public static IEnumerable<CodeInstruction> GetLetterText(IEnumerable<CodeInstruction> instructions)
         {
             var codes = new List<CodeInstruction>(instructions);
@@ -49,68 +43,8 @@ namespace HideRaidStrategy
                 }
             }
             if( !found )
-                Log.Error("HideRaidStrategy: Failed to patch GetLetterText()");
+                Log.Error("HideRaidStrategy: Failed to patch IncidentWorker_RaidEnemy.GetLetterText()");
             return codes;
-        }
-    }
-
-    [HarmonyPatch(typeof(IncidentWorker_PsychicRitualSiege))]
-    public static class IncidentWorker_PsychicRitualSiege_Patch
-    {
-        [HarmonyTranspiler]
-        [HarmonyPatch(nameof(GetLetterText))]
-        public static IEnumerable<CodeInstruction> GetLetterText(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-        {
-            var codes = new List<CodeInstruction>(instructions);
-            bool found = false;
-            int blockStart = -1;
-            for( int i = 0; i < codes.Count; ++i )
-            {
-                // Log.Message("T:" + i + ":" + codes[i].opcode + "::" + (codes[i].operand != null ? codes[i].operand.ToString() : codes[i].operand));
-                // The function has code:
-                // taggedString += "\n\n";
-                // if (!parms.psychicRitualDef.letterAIArrivedText.NullOrEmpty())
-                //     taggedString += parms.psychicRitualDef.letterAIArrivedText;
-                // else
-                //     taggedString += parms.raidStrategy.arrivalTextEnemy.Formatted(parms.psychicRitualDef.label.Named("RITUAL"));
-                // Place all of it inside:
-                // if(IncidentWorker_PsychicRitualSiege_Patch_Hook())
-                if( blockStart == -1
-                    && codes[ i ].IsLdloc()
-                    && i + 3 < codes.Count
-                    && codes[ i + 1 ].opcode == OpCodes.Ldstr && codes[ i + 1 ].operand.ToString() == "\n\n"
-                    && codes[ i + 2 ].opcode == OpCodes.Call
-                    && codes[ i + 2 ].operand.ToString() == "Verse.TaggedString op_Addition(Verse.TaggedString, System.String)"
-                    && codes[ i + 3 ].IsStloc())
-                {
-                    blockStart = i;
-                }
-                if( blockStart != -1
-                    && codes[ i ].opcode == OpCodes.Ldstr && codes[ i ].operand.ToString() == "RITUAL"
-                    && i + 4 < codes.Count
-                    && codes[ i + 1 ].opcode == OpCodes.Call
-                    && codes[ i + 2 ].opcode == OpCodes.Call
-                    && codes[ i + 3 ].opcode == OpCodes.Call
-                    && codes[ i + 3 ].operand.ToString() == "Verse.TaggedString op_Addition(Verse.TaggedString, Verse.TaggedString)"
-                    && codes[ i + 4 ].IsStloc())
-                {
-                    Label label = generator.DefineLabel();
-                    codes[ i + 5 ].labels.Add( label );
-                    codes.Insert( i, new CodeInstruction( OpCodes.Call,
-                        typeof( IncidentWorker_PsychicRitualSiege_Patch ).GetMethod( nameof( IncidentWorker_PsychicRitualSiege_Patch_Hook ))));
-                    codes.Insert( i + 1, new CodeInstruction( OpCodes.Brfalse, label ));
-                    found = true;
-                    break;
-                }
-            }
-            if( !found )
-                Log.Error("HideRaidStrategy: Failed to patch IncidentWorker_PsychicRitualSiege.GetLetterText()");
-            return codes;
-        }
-
-        public static bool IncidentWorker_PsychicRitualSiege_Patch_Hook()
-        {
-            return !HideRaidStrategyMod.settings.maskRaidLikeEvents;
         }
     }
 }

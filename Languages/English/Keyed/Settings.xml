@@ -2,6 +2,6 @@
 <LanguageData>
 
   <HideRaidStrategy.MaskRaidLikeEvents.Label>Mask also raid-like events</HideRaidStrategy.MaskRaidLikeEvents.Label>
-  <HideRaidStrategy.MaskRaidLikeEvents.Tooltip>Events similar to raids will appear as raids.\nSuch events include Psychic Ritual Siege from the Anomaly DLC or events from the '[SR]Raid Extension (fork)' mod.</HideRaidStrategy.MaskRaidLikeEvents.Tooltip>
+  <HideRaidStrategy.MaskRaidLikeEvents.Tooltip>Events similar to raids will appear as raids.\nAnd example is events from the '[SR]Raid Extension (fork)' mod.</HideRaidStrategy.MaskRaidLikeEvents.Tooltip>
 
 </LanguageData>
