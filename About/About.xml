@@ -17,7 +17,7 @@
     <loadAfter>
         <li>brrainz.harmony</li>
     </loadAfter>
-    <description>This mod prevents the game from giving away details about how a raid will proceed in advance (such as whether raiders will breach walls, attack immediately or avoid traps).
+    <description>This mod prevents the game from giving away details about how a raid will proceed, such as whether raiders will breach walls, attack immediately or avoid traps.
 
 GitHub: https://github.com/llunak/rimworld-hideraidstrategy
 
