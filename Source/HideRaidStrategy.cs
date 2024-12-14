@@ -12,7 +12,7 @@ namespace HideRaidStrategy
     {
         [HarmonyTranspiler]
         [HarmonyPatch(nameof(GetLetterText))]
-        public static IEnumerable<CodeInstruction> GetLetterText(IEnumerable<CodeInstruction> instructions)
+        public static IEnumerable<CodeInstruction> GetLetterText(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             var codes = new List<CodeInstruction>(instructions);
             bool found = false;
@@ -22,7 +22,8 @@ namespace HideRaidStrategy
                 // The function has code:
                 // text += "\n\n";
                 // text += parms.raidStrategy.arrivalTextEnemy;
-                // Remove it.
+                // Place all of it inside:
+                // if(GetLetterText_Hook(this))
                 if( codes[ i ].IsLdloc()
                     && i + 9 < codes.Count
                     && codes[ i + 1 ].opcode == OpCodes.Ldstr && codes[ i + 1 ].operand.ToString() == "\n\n"
@@ -37,7 +38,12 @@ namespace HideRaidStrategy
                     && codes[ i + 8 ].operand.ToString() == "System.String Concat(System.String, System.String)"
                     && codes[ i + 9 ].IsStloc())
                 {
-                    codes.RemoveRange( i, 10 );
+                    Label label = generator.DefineLabel();
+                    codes[ i + 10 ].labels.Add( label );
+                    codes.Insert( i, new CodeInstruction( OpCodes.Ldarg_0 )); // load 'this'
+                    codes.Insert( i + 1, new CodeInstruction( OpCodes.Call,
+                        typeof( IncidentWorker_RaidEnemy_Patch ).GetMethod( nameof( GetLetterText_Hook ))));
+                    codes.Insert( i + 2, new CodeInstruction( OpCodes.Brfalse, label ));
                     found = true;
                     break;
                 }
@@ -47,12 +53,19 @@ namespace HideRaidStrategy
             return codes;
         }
 
+        public static bool GetLetterText_Hook(IncidentWorker_RaidEnemy worker)
+        {
+            return !HideRaidStrategyMod.settings.maskRaidLikeEvents && HideRaidStrategyMod.IsRaidLikeEvent(worker.GetType());
+        }
+
         // Force the letter text to be just the faction name, so that there's no detail like 'Siege'.
         [HarmonyPostfix]
         [HarmonyPatch(nameof(GetLetterLabel))]
         [HarmonyPriority(Priority.VeryLow)]
-        public static string GetLetterLabel(string unusedResult, IncidentParms parms)
+        public static string GetLetterLabel(string result, IncidentWorker_RaidEnemy __instance, IncidentParms parms)
         {
+            if( !HideRaidStrategyMod.settings.maskRaidLikeEvents && HideRaidStrategyMod.IsRaidLikeEvent(__instance.GetType()))
+                return result;
             return parms.faction.Name;
         }
     }
