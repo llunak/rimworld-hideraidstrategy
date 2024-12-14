@@ -7,16 +7,6 @@ using System.Reflection.Emit;
 
 namespace HideRaidStrategy
 {
-    [StaticConstructorOnStartup]
-    public class HarmonyPatches
-    {
-        static HarmonyPatches()
-        {
-            var harmony = new Harmony("llunak.HideRaidStrategy");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
-        }
-    }
-
     [HarmonyPatch]
     public static class IncidentWorker_Generic_Patch
     {
@@ -69,7 +59,7 @@ namespace HideRaidStrategy
     {
         [HarmonyTranspiler]
         [HarmonyPatch(nameof(GetLetterText))]
-        public static IEnumerable<CodeInstruction> GetLetterText(IEnumerable<CodeInstruction> instructions)
+        public static IEnumerable<CodeInstruction> GetLetterText(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
         {
             var codes = new List<CodeInstruction>(instructions);
             bool found = false;
@@ -83,7 +73,8 @@ namespace HideRaidStrategy
                 //     taggedString += parms.psychicRitualDef.letterAIArrivedText;
                 // else
                 //     taggedString += parms.raidStrategy.arrivalTextEnemy.Formatted(parms.psychicRitualDef.label.Named("RITUAL"));
-                // Remove it.
+                // Place all of it inside:
+                // if(IncidentWorker_PsychicRitualSiege_Patch_Hook())
                 if( blockStart == -1
                     && codes[ i ].IsLdloc()
                     && i + 3 < codes.Count
@@ -103,7 +94,11 @@ namespace HideRaidStrategy
                     && codes[ i + 3 ].operand.ToString() == "Verse.TaggedString op_Addition(Verse.TaggedString, Verse.TaggedString)"
                     && codes[ i + 4 ].IsStloc())
                 {
-                    codes.RemoveRange( blockStart, i + 4 - blockStart + 1 );
+                    Label label = generator.DefineLabel();
+                    codes[ i + 5 ].labels.Add( label );
+                    codes.Insert( i, new CodeInstruction( OpCodes.Call,
+                        typeof( IncidentWorker_PsychicRitualSiege_Patch ).GetMethod( nameof( IncidentWorker_PsychicRitualSiege_Patch_Hook ))));
+                    codes.Insert( i + 1, new CodeInstruction( OpCodes.Brfalse, label ));
                     found = true;
                     break;
                 }
@@ -111,6 +106,11 @@ namespace HideRaidStrategy
             if( !found )
                 Log.Error("HideRaidStrategy: Failed to patch IncidentWorker_PsychicRitualSiege.GetLetterText()");
             return codes;
+        }
+
+        public static bool IncidentWorker_PsychicRitualSiege_Patch_Hook()
+        {
+            return !HideRaidStrategyMod.settings.maskRaidLikeEvents;
         }
     }
 }
