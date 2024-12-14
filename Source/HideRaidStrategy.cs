@@ -46,5 +46,14 @@ namespace HideRaidStrategy
                 Log.Error("HideRaidStrategy: Failed to patch IncidentWorker_RaidEnemy.GetLetterText()");
             return codes;
         }
+
+        // Force the letter text to be just the faction name, so that there's no detail like 'Siege'.
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(GetLetterLabel))]
+        [HarmonyPriority(Priority.VeryLow)]
+        public static string GetLetterLabel(string unusedResult, IncidentParms parms)
+        {
+            return parms.faction.Name;
+        }
     }
 }
