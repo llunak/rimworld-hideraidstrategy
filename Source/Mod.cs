@@ -105,6 +105,7 @@ namespace HideRaidStrategy
             TaggedString relatedText = "LetterRelatedPawnsRaidEnemy".Translate(Faction.OfPlayer.def.pawnsPlural, parms.faction.def.pawnsPlural);
             PawnRelationUtility.Notify_PawnsSeenByPlayer_Letter(pawns, ref letterLabel, ref text, relatedText, informEvenIfSeenBefore: true);
             worker.SendStandardLetter(letterLabel, text, LetterDefOf.ThreatBig, parms, pawns);
+            Find.TickManager.slower.SignalForceNormalSpeedShort();
         }
 
         // Call with the type of the IncidentWorker_RaidEnemy derived class if the event is supposed to be masked
